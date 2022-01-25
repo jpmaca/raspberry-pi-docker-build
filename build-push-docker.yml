@@ -1,0 +1,59 @@
+name: Build and Push ARM64 docker image
+on:
+  workflow_call:
+    inputs:
+      username:
+        required: true
+        type: string
+      registry-name:
+        required: true
+        type: string
+      repository-name:
+        required: true
+        type: string
+jobs:
+    Build_Docker:
+      runs-on: ubuntu-latest
+      steps:
+            - uses: actions/checkout@v2
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@v1
+            - name: Docker Setup Buildx
+              # You may pin to the exact commit or the version.
+              # uses: docker/setup-buildx-action@94ab11c41e45d028884a99163086648e898eed25
+              uses: docker/setup-buildx-action@v1.6.0
+              with:
+                  # Sets up docker build command as an alias to docker buildx
+                  install: true # optional, default is false'
+
+            - name: Docker Login
+              # You may pin to the exact commit or the version.
+              # uses: docker/login-action@42d299face0c5c43a0487c477f595ac9cf22f1a7
+              uses: docker/login-action@v1.12.0
+              with:
+                  # Server address of Docker registry. If not set then will default to Docker Hub
+                  registry: ${{ inputs.registry-name }} # optional
+                  # Username used to log against the Docker registry
+                  username: ${{ inputs.username }} # optional
+                  # Password or personal access token used to log against the Docker registry
+                  password: ${{ secrets.GITHUB_TOKEN }} # optional
+            - name: Get current date
+              id: date
+              run: echo "::set-output name=date::$(date +'%Y%m%d%H%M%S')"
+            - name: Write tag to file
+              id: tag-write
+              run: echo IMAGE_TAG=${{ steps.date.outputs.date }} >> tag.txt
+            - name: Archive production artifacts
+              uses: actions/upload-artifact@v2
+              with:
+                  name: tag
+                  path: |
+                    tag.txt              
+              
+            - name: Build and push
+              id: build-push
+              uses: docker/build-push-action@v2
+              with:
+                  push: true
+                  tags: ${{inputs.registry-name}}/${{ inputs.repository-name }}:latest,${{inputs.registry-name}}/${{ inputs.repository-name }}:${{ steps.date.outputs.date }}
+                  platforms: linux/arm64
