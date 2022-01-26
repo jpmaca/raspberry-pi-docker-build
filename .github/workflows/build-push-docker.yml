@@ -11,6 +11,10 @@ on:
       repository-name:
         required: true
         type: string
+      dockerfile:
+        required: false
+        type: string
+        default: ''
 jobs:
     Build_Docker:
       runs-on: ubuntu-latest
@@ -52,8 +56,18 @@ jobs:
               
             - name: Build and push
               id: build-push
+              if: ${{ inputs.dockerfile != '' }}
               uses: docker/build-push-action@v2
               with:
                   push: true
                   tags: ${{inputs.registry-name}}/${{ inputs.repository-name }}:latest,${{inputs.registry-name}}/${{ inputs.repository-name }}:${{ steps.date.outputs.date }}
                   platforms: linux/arm64
+                  file: ${{inputs.dockerfile}}
+            - name: Build and push
+              id: build-push
+              if: ${{ inputs.dockerfile == '' }}
+              uses: docker/build-push-action@v2
+              with:
+                  push: true
+                  tags: ${{inputs.registry-name}}/${{ inputs.repository-name }}:latest,${{inputs.registry-name}}/${{ inputs.repository-name }}:${{ steps.date.outputs.date }}
+                  platforms: linux/arm64            
